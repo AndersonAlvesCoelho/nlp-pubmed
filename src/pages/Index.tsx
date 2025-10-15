@@ -1,148 +1,45 @@
-import { useState, useEffect } from "react";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Separator } from "@/components/ui/separator";
-import { Search, Save, Trash2, Loader2, BookMarked } from "lucide-react";
-import { toast } from "sonner";
-import { SummarySection } from "@/components/SummarySection";
+import DialogSelectedArticles from '@/components/DialogSelectedArticles';
+import { SummarySection } from '@/components/SummarySection';
+import { Button } from '@/components/ui/button';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { Separator } from '@/components/ui/separator';
+import { usePubMedArticles } from '@/hooks/UsePubMedArticles';
+import { BookMarked, Loader2, Save, Search, Trash2 } from 'lucide-react';
 
-// IMPORTANTE: Adicione sua API key do PubMed aqui (opcional - a maioria das funcionalidades funciona sem)
-const PUBMED_API_KEY = ""; // Exemplo: "sua_api_key_aqui"
-
-interface Article {
-  id: string;
-  title: string;
-  authors: string[];
-  date: string;
-  abstract: string;
-  pmid: string;
-}
-
-const Index = () => {
-  const [searchQuery, setSearchQuery] = useState("");
-  const [searchResults, setSearchResults] = useState<Article[]>([]);
-  const [savedArticles, setSavedArticles] = useState<Article[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
-
-  // Carregar artigos salvos do localStorage
-  useEffect(() => {
-    const saved = localStorage.getItem("savedArticles");
-    if (saved) {
-      try {
-        setSavedArticles(JSON.parse(saved));
-      } catch (error) {
-        console.error("Erro ao carregar artigos salvos:", error);
-      }
-    }
-  }, []);
-
-  // Salvar artigos no localStorage sempre que a lista mudar
-  useEffect(() => {
-    localStorage.setItem("savedArticles", JSON.stringify(savedArticles));
-  }, [savedArticles]);
-
-  const searchPubMed = async () => {
-    if (!searchQuery.trim()) {
-      toast.error("Por favor, digite um termo de pesquisa");
-      return;
-    }
-
-    setIsLoading(true);
-    setSearchResults([]);
-
-    try {
-      // Etapa 1: Buscar IDs dos artigos
-      const apiKeyParam = PUBMED_API_KEY ? `&api_key=${PUBMED_API_KEY}` : "";
-      const searchUrl = `https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi?db=pubmed&term=${encodeURIComponent(
-        searchQuery
-      )}&retmode=json&retmax=20${apiKeyParam}`;
-
-      const searchResponse = await fetch(searchUrl);
-      const searchData = await searchResponse.json();
-
-      if (!searchData.esearchresult?.idlist?.length) {
-        toast.info("Nenhum artigo encontrado");
-        setIsLoading(false);
-        return;
-      }
-
-      const ids = searchData.esearchresult.idlist.join(",");
-
-      // Etapa 2: Buscar detalhes dos artigos
-      const fetchUrl = `https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi?db=pubmed&id=${ids}&retmode=xml${apiKeyParam}`;
-
-      const fetchResponse = await fetch(fetchUrl);
-      const xmlText = await fetchResponse.text();
-
-      // Parse XML
-      const parser = new DOMParser();
-      const xmlDoc = parser.parseFromString(xmlText, "text/xml");
-      const articles = xmlDoc.querySelectorAll("PubmedArticle");
-
-      const parsedArticles: Article[] = Array.from(articles).map((article) => {
-        const pmid = article.querySelector("PMID")?.textContent || "";
-        const title = article.querySelector("ArticleTitle")?.textContent || "Título não disponível";
-        
-        const authorNodes = article.querySelectorAll("Author");
-        const authors = Array.from(authorNodes).map((author) => {
-          const lastName = author.querySelector("LastName")?.textContent || "";
-          const foreName = author.querySelector("ForeName")?.textContent || "";
-          return `${foreName} ${lastName}`.trim();
-        }).filter(name => name);
-
-        const year = article.querySelector("PubDate Year")?.textContent || "";
-        const month = article.querySelector("PubDate Month")?.textContent || "";
-        const date = `${month} ${year}`.trim() || "Data não disponível";
-
-        const abstractNodes = article.querySelectorAll("AbstractText");
-        const abstract = Array.from(abstractNodes)
-          .map((node) => node.textContent)
-          .join(" ")
-          .trim() || "Resumo não disponível";
-
-        return {
-          id: pmid,
-          title,
-          authors: authors.slice(0, 5),
-          date,
-          abstract,
-          pmid,
-        };
-      });
-
-      setSearchResults(parsedArticles);
-      toast.success(`${parsedArticles.length} artigos encontrados`);
-    } catch (error) {
-      console.error("Erro ao buscar artigos:", error);
-      toast.error("Erro ao buscar artigos. Tente novamente.");
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const saveArticle = (article: Article) => {
-    if (savedArticles.some((a) => a.id === article.id)) {
-      toast.info("Artigo já está na sua lista");
-      return;
-    }
-    setSavedArticles([...savedArticles, article]);
-    toast.success("Artigo salvo na lista pessoal");
-  };
-
-  const removeArticle = (articleId: string) => {
-    setSavedArticles(savedArticles.filter((a) => a.id !== articleId));
-    toast.success("Artigo removido da lista");
-  };
-
-  const handleKeyPress = (e: React.KeyboardEvent) => {
-    if (e.key === "Enter") {
-      searchPubMed();
-    }
-  };
+export default function Index() {
+  const {
+    openDialog,
+    setOpenDialog,
+    searchQuery,
+    setSearchQuery,
+    searchResults,
+    savedArticles,
+    isLoading,
+    searchPubMed,
+    saveArticle,
+    removeArticle,
+    analyzeArticles,
+    analysisResult,
+    isAnalyzing,
+  } = usePubMedArticles({ pubmedApiKey: '' });
 
   return (
     <div className="min-h-screen bg-background">
+      <DialogSelectedArticles
+        open={openDialog}
+        setOpen={setOpenDialog}
+        savedArticles={savedArticles}
+        removeArticle={removeArticle}
+        analyzeArticles={analyzeArticles}
+      />
+
       {/* Header */}
       <header className="sticky top-0 z-50 w-full border-b border-border bg-card/95 backdrop-blur supports-[backdrop-filter]:bg-card/60">
         <div className="container mx-auto px-4 py-6">
@@ -154,7 +51,7 @@ const Index = () => {
               Resumo de Artigos PubMed - NPL
             </h1>
           </div>
-          
+
           {/* Barra de Pesquisa */}
           <div className="flex gap-2 max-w-3xl">
             <Input
@@ -162,7 +59,6 @@ const Index = () => {
               placeholder="Digite palavras-chave, autores ou termos médicos..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              onKeyPress={handleKeyPress}
               className="flex-1 h-12 text-base"
             />
             <Button
@@ -185,6 +81,17 @@ const Index = () => {
             </Button>
           </div>
         </div>
+
+        {savedArticles.length > 0 && (
+          <Button
+            onClick={() => setOpenDialog(true)}
+            className="fixed bottom-6 right-6 z-50 h-12 px-6 gap-2 bg-primary text-primary-foreground hover:bg-primary/90 shadow-lg"
+            size="lg"
+          >
+            <BookMarked className="h-5 w-5" />
+            Gerar Resumo ({savedArticles.length} artigos)
+          </Button>
+        )}
       </header>
 
       {/* Conteúdo Principal */}
@@ -215,7 +122,10 @@ const Index = () => {
             )}
 
             {searchResults.map((article) => (
-              <Card key={article.id} className="hover:shadow-lg transition-shadow">
+              <Card
+                key={article.id}
+                className="hover:shadow-lg transition-shadow"
+              >
                 <CardHeader>
                   <div className="flex items-start justify-between gap-4">
                     <div className="flex-1">
@@ -225,11 +135,11 @@ const Index = () => {
                       <CardDescription className="text-sm">
                         {article.authors.length > 0 ? (
                           <span>
-                            {article.authors.join(", ")}
-                            {article.authors.length === 5 && " et al."}
+                            {article.authors.join(', ')}
+                            {article.authors.length === 5 && ' et al.'}
                           </span>
                         ) : (
-                          "Autores não disponíveis"
+                          'Autores não disponíveis'
                         )}
                       </CardDescription>
                       <CardDescription className="text-xs mt-1">
@@ -271,7 +181,7 @@ const Index = () => {
               <h2 className="text-2xl font-semibold text-foreground mb-4">
                 Lista Pessoal
               </h2>
-              
+
               {savedArticles.length === 0 ? (
                 <Card className="border-dashed">
                   <CardContent className="flex flex-col items-center justify-center py-8 text-center">
@@ -282,9 +192,12 @@ const Index = () => {
                   </CardContent>
                 </Card>
               ) : (
-                <div className="space-y-3">
+                <div className="space-y-3 scroll-">
                   {savedArticles.map((article) => (
-                    <Card key={article.id} className="hover:shadow-md transition-shadow">
+                    <Card
+                      key={article.id}
+                      className="hover:shadow-md transition-shadow"
+                    >
                       <CardContent className="p-4">
                         <div className="flex items-start gap-3">
                           <div className="flex-1 min-w-0">
@@ -320,22 +233,22 @@ const Index = () => {
 
               {savedArticles.length > 0 && (
                 <p className="text-xs text-muted-foreground mt-4 text-center">
-                  {savedArticles.length} {savedArticles.length === 1 ? "artigo salvo" : "artigos salvos"}
+                  {savedArticles.length}{' '}
+                  {savedArticles.length === 1
+                    ? 'artigo salvo'
+                    : 'artigos salvos'}
                 </p>
               )}
             </div>
           </div>
         </div>
-
         {/* Seção de Resumos Interativos */}
-        {savedArticles.length > 0 && (
+        {analysisResult?.articles.length > 0 && (
           <div className="mt-12">
-            <SummarySection articles={savedArticles} />
+            <SummarySection analysis={analysisResult} />
           </div>
         )}
       </main>
     </div>
   );
-};
-
-export default Index;
+}

@@ -1,20 +1,13 @@
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { IFullAnalyzedArticle } from "@/types/articles";
 import { ChevronDown, ChevronUp } from "lucide-react";
 import { useState } from "react";
 
-interface Article {
-  id: string;
-  title: string;
-  authors: string[];
-  date: string;
-  abstract: string;
-  pmid: string;
-}
 
 interface ArticleSummaryProps {
-  article: Article;
+  article: IFullAnalyzedArticle;
 }
 
 export const ArticleSummary = ({ article }: ArticleSummaryProps) => {
@@ -57,7 +50,7 @@ export const ArticleSummary = ({ article }: ArticleSummaryProps) => {
             </div>
             <div className="text-sm leading-relaxed text-foreground/90 pt-2 border-t">
               <p className="font-medium mb-2">Resumo:</p>
-              <p>{article.abstract}</p>
+              <p>{article.summary}</p>
             </div>
           </CardContent>
         </CollapsibleContent>

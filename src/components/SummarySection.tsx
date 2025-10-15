@@ -1,49 +1,28 @@
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { ArticleSummary } from "./ArticleSummary";
-import { FileText, Copy, Check } from "lucide-react";
-import { useState } from "react";
-import { toast } from "sonner";
-
-interface Article {
-  id: string;
-  title: string;
-  authors: string[];
-  date: string;
-  abstract: string;
-  pmid: string;
-}
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { IAnalyzeResponse } from '@/types/articles';
+import { Check, Copy, FileText } from 'lucide-react';
+import { useState } from 'react';
+import { toast } from 'sonner';
+import { ArticleSummary } from './ArticleSummary';
 
 interface SummarySectionProps {
-  articles: Article[];
+  analysis: IAnalyzeResponse;
 }
 
-export const SummarySection = ({ articles }: SummarySectionProps) => {
-  const [generalSummary, setGeneralSummary] = useState<string>("");
+export const SummarySection = ({ analysis }: SummarySectionProps) => {
   const [copied, setCopied] = useState(false);
 
-  if (articles.length === 0) return null;
-
-  const generateGeneralSummary = () => {
-    const combined = articles
-      .map((article, index) => {
-        return `${index + 1}. ${article.title}\n${article.abstract}\n`;
-      })
-      .join("\n");
-
-    const summary = `RESUMO GERAL DE ${articles.length} ARTIGOS\n\n${combined}`;
-    setGeneralSummary(summary);
-    toast.success("Resumo geral gerado com sucesso!");
-  };
+  if (analysis?.articles.length === 0) return null;
 
   const copyToClipboard = async () => {
     try {
-      await navigator.clipboard.writeText(generalSummary);
+      await navigator.clipboard.writeText(analysis.general_summary || '');
       setCopied(true);
-      toast.success("Resumo copiado para a área de transferência!");
+      toast.success('Resumo copiado para a área de transferência!');
       setTimeout(() => setCopied(false), 2000);
     } catch (error) {
-      toast.error("Erro ao copiar resumo");
+      toast.error('Erro ao copiar resumo');
     }
   };
 
@@ -64,7 +43,7 @@ export const SummarySection = ({ articles }: SummarySectionProps) => {
           Resumos Individuais
         </h3>
         <div className="space-y-3">
-          {articles.map((article) => (
+          {analysis.articles.map((article) => (
             <ArticleSummary key={article.id} article={article} />
           ))}
         </div>
@@ -72,19 +51,9 @@ export const SummarySection = ({ articles }: SummarySectionProps) => {
 
       {/* Resumo Geral */}
       <div className="space-y-4">
-        <div className="flex items-center justify-between">
-          <h3 className="text-lg font-medium text-foreground">Resumo Geral</h3>
-          <Button
-            onClick={generateGeneralSummary}
-            variant="default"
-            className="gap-2"
-          >
-            <FileText className="h-4 w-4" />
-            Gerar Resumo Geral
-          </Button>
-        </div>
+        <h3 className="text-lg font-medium text-foreground">Resumo Geral</h3>
 
-        {generalSummary && (
+        {analysis?.general_summary && (
           <Card className="border-primary/20 bg-card/50 backdrop-blur animate-scale-in">
             <CardHeader>
               <div className="flex items-center justify-between">
@@ -111,7 +80,7 @@ export const SummarySection = ({ articles }: SummarySectionProps) => {
             </CardHeader>
             <CardContent>
               <pre className="text-sm leading-relaxed whitespace-pre-wrap text-foreground/90 font-sans">
-                {generalSummary}
+                {analysis?.general_summary}
               </pre>
             </CardContent>
           </Card>
