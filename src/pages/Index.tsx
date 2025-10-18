@@ -1,3 +1,4 @@
+import { AnalysisFeedback } from '@/components/AnalysisFeedback';
 import DialogSelectedArticles from '@/components/DialogSelectedArticles';
 import { SummarySection } from '@/components/SummarySection';
 import { Button } from '@/components/ui/button';
@@ -11,6 +12,7 @@ import {
 import { Input } from '@/components/ui/input';
 import { Separator } from '@/components/ui/separator';
 import { usePubMedArticles } from '@/hooks/UsePubMedArticles';
+import { AnimatePresence } from 'framer-motion';
 import { BookMarked, Loader2, Save, Search, Trash2 } from 'lucide-react';
 
 export default function Index() {
@@ -28,6 +30,8 @@ export default function Index() {
     analyzeArticles,
     analysisResult,
     isAnalyzing,
+    progress,
+    statusMessage,
   } = usePubMedArticles({ pubmedApiKey: '' });
 
   return (
@@ -39,6 +43,14 @@ export default function Index() {
         removeArticle={removeArticle}
         analyzeArticles={analyzeArticles}
       />
+
+      <AnimatePresence>
+        <AnalysisFeedback
+          isAnalyzing={isAnalyzing}
+          progress={progress}
+          message={statusMessage}
+        />
+      </AnimatePresence>
 
       {/* Header */}
       <header className="sticky top-0 z-50 w-full border-b border-border bg-card/95 backdrop-blur supports-[backdrop-filter]:bg-card/60">

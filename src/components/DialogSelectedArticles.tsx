@@ -5,7 +5,7 @@ import {
   DialogContent,
   DialogFooter,
   DialogHeader,
-  DialogTitle
+  DialogTitle,
 } from '@/components/ui/dialog';
 import { IArticle } from '@/types/articles';
 import { Trash2 } from 'lucide-react';

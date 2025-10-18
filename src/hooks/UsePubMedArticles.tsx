@@ -20,6 +20,10 @@ export const usePubMedArticles = ({
   const [isAnalyzing, setIsAnalyzing] = useState(false);
 
   const [openDialog, setOpenDialog] = useState(false);
+
+  const [progress, setProgress] = useState(0);
+  const [statusMessage, setStatusMessage] = useState('Preparando análise...');
+
   // Carregar artigos salvos do localStorage
   useEffect(() => {
     const saved = localStorage.getItem('savedArticles');
@@ -143,14 +147,25 @@ export const usePubMedArticles = ({
         return;
       }
 
+      setOpenDialog(false)
+      setIsAnalyzing(true);
+      setProgress(10);
+      setStatusMessage('Enviando artigos para análise...');
+
       try {
         setIsAnalyzing(true);
 
-        const response = await fetch('http://localhost:8000/analyze', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ email, article_ids: articleIds }),
-        });
+        const response = await fetch(
+          'https://api-pubmed-nlp.onrender.com/analyze',
+          {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email, article_ids: articleIds }),
+          }
+        );
+
+        setProgress(60);
+        setStatusMessage('Processando conteúdo e gerando resumos...');
 
         if (!response.ok) {
           const text = await response.text();
@@ -158,6 +173,8 @@ export const usePubMedArticles = ({
         }
 
         const data = await response.json();
+        setProgress(90);
+        setStatusMessage('Finalizando e organizando resultados...');
 
         const combinedArticles = data.articles.map((analyzed) => {
           const original = savedArticles.find((a) => a.id === analyzed.id);
@@ -179,11 +196,16 @@ export const usePubMedArticles = ({
           articles: combinedArticles,
           general_summary: data.general_summary,
         });
-        toast.success('Análise realizada com sucesso');
-        return true;
-      } catch (error: any) {
-        console.error('Erro ao analisar artigos:', error);
-        toast.error(`Erro ao analisar artigos: ${error.message}`);
+
+        setProgress(100);
+        setStatusMessage('Análise concluída!');
+        toast.success(
+          `Análise concluída com sucesso! ${combinedArticles.length} artigos processados.`
+        );
+
+        return null;
+      } catch {
+        toast.error(`Erro ao analisar artigos: `);
       } finally {
         setIsAnalyzing(false);
       }
@@ -205,5 +227,7 @@ export const usePubMedArticles = ({
     analyzeArticles,
     analysisResult,
     isAnalyzing,
+    progress,
+    statusMessage,
   };
 };
